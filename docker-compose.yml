@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: django/Dockerfile
+      args:
+        UID: $UID
+    image: peedrohj/django
+    command: ./django/.docker/entrypoint.sh
+    volumes:
+      - static-data:/vol/web
+      - .:/home/python/app
+    ports:
+      - 8000:8000
+    depends_on:
+      - db-postgres
+    networks:
+      - private
+
+  frontend:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+      args:
+        UID: $UID
+    command: ./app/.docker/entrypoint.sh
+    image: peedrohj/react
+    volumes:
+      - .:/home/react/app
+    ports:
+      - 3000:3000
+
+  db-postgres:
+    image: postgres:11-alpine
+    environment:
+      - POSTGRES_DB=django
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - 5432:5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - private
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./portainer-data:/data
+    ports:
+      - 9000:9000
+
+volumes:
+  db_data:
+  static-data:
+
+
+networks:
+  private:
+    driver: bridge
